@@ -29,16 +29,20 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from typing import Any, Optional, cast
 
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
+from cartopy.mpl.geoaxes import GeoAxes
 import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
 
 
 def choose_diff_var(ds: xr.Dataset) -> str | None:
-    for v in ds.data_vars:
+    # ds.data_vars keys are Hashable; cast to str for startswith + return type.
+    for k in ds.data_vars.keys():
+        v = cast(str, k)
         if v.startswith("DIFF_"):
             return v
     return None
@@ -96,9 +100,9 @@ def out_png_for_nc(nc_path: Path, plots_root: Path) -> Path:
 
 
 def build_main_title(ds: xr.Dataset, var: str) -> str:
-    long_name = ds[var].attrs.get("long_name", "").strip() or var
-    init_time = ds[var].attrs.get("init_time", "")
-    valid_time = ds[var].attrs.get("valid_time", "")
+    long_name = str(ds[var].attrs.get("long_name", "")).strip() or var
+    init_time = str(ds[var].attrs.get("init_time", "")).strip()
+    valid_time = str(ds[var].attrs.get("valid_time", "")).strip()
     diff_desc = str(ds.attrs.get("Difference", "")).strip()
 
     lines: list[str] = [long_name]
@@ -139,7 +143,6 @@ def process_one_target(
         print(f"[{label}] No files matched: {stats_root}/YYYYMMDD/HH/FFF/{pattern}")
         return (0, 0)
 
-    # hard filter by prefix
     nc_files = [p for p in found if p.name.startswith(prefix)]
     print(
         f"[{label}] Found {len(found)} files, keeping {len(nc_files)} with prefix '{prefix}'"
@@ -152,7 +155,7 @@ def process_one_target(
         if max_files and idx > max_files:
             break
 
-        out_png = out_png_for_nc(nc_path, plots_root)  # always overwrite
+        out_png = out_png_for_nc(nc_path, plots_root)
 
         try:
             ds = xr.open_dataset(nc_path)
@@ -170,10 +173,8 @@ def process_one_target(
 
             lat2d = np.asarray(ds["lat"].values)
             lon2d = to_lon180(np.asarray(ds["lon"].values))
-
             da = mask_fill(pick_2d(ds[var]))
 
-            # autoscale unless both provided
             if vmin_arg is None or vmax_arg is None:
                 auto_vmin, auto_vmax = finite_min_max(da)
                 vmin = auto_vmin if vmin_arg is None else vmin_arg
@@ -189,11 +190,9 @@ def process_one_target(
             ]
 
             fig = plt.figure(figsize=(fig_w, fig_h))
-
-            # filename at top
             fig.suptitle(f"({nc_path.name})", fontsize=file_fontsize, y=suptitle_y)
 
-            ax = plt.axes(projection=ccrs.PlateCarree())
+            ax = cast(GeoAxes, plt.axes(projection=ccrs.PlateCarree()))
             ax.set_extent(extent, crs=ccrs.PlateCarree())
 
             mesh = ax.pcolormesh(
@@ -212,13 +211,14 @@ def process_one_target(
                 ax.add_feature(cfeature.STATES, linewidth=0.4)
 
             if gridlines:
-                gl = ax.gridlines(draw_labels=True, linewidth=0.3, alpha=0.6)
+                # Cartopy returns a Gridliner object; not all attrs are typed in stubs.
+                gl: Any = ax.gridlines(draw_labels=True, linewidth=0.3, alpha=0.6)
                 gl.right_labels = False
                 gl.top_labels = False
 
             ax.set_title(build_main_title(ds, var), fontsize=title_fontsize)
 
-            units = ds[var].attrs.get("units", "")
+            units = str(ds[var].attrs.get("units", "")).strip()
             cb = fig.colorbar(
                 mesh, ax=ax, orientation="horizontal", pad=0.12, fraction=0.06
             )
@@ -253,7 +253,7 @@ def main() -> None:
 
     ap.add_argument("--global-stats-root", default="wxvx_workdir/global/run/stats")
     ap.add_argument("--global-plots-root", default="wxvx_workdir/global/run/plots")
-    ap.add_argument("--global-prefix", default="grid_stat_nested")  # change if needed
+    ap.add_argument("--global-prefix", default="grid_stat_nested")
 
     ap.add_argument(
         "--do-lam",
@@ -281,7 +281,6 @@ def main() -> None:
 
     args = ap.parse_args()
 
-    # If neither specified, do both.
     do_lam = args.do_lam or (not args.do_lam and not args.do_global)
     do_global = args.do_global or (not args.do_lam and not args.do_global)
 
