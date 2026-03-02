@@ -2,7 +2,7 @@
 """
 plot_wxvx_stats_var.py
 
-Process two wxvx workdirs (global & lam) in one script:
+Process two wxvx workdirs in one script:
 
 LAM:
   read:  wxvx_workdir/lam/run/stats/YYYYMMDD/HH/FFF/
@@ -25,15 +25,16 @@ Other features:
 - always overwrite PNGs
 """
 
+from __future__ import annotations
+
 import argparse
 from pathlib import Path
 
-import numpy as np
-import xarray as xr
-import matplotlib.pyplot as plt
-
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
+import matplotlib.pyplot as plt
+import numpy as np
+import xarray as xr
 
 
 def choose_diff_var(ds: xr.Dataset) -> str | None:
@@ -81,8 +82,8 @@ def parse_figsize(s: str) -> tuple[float, float]:
     try:
         w, h = (float(x.strip()) for x in s.split(","))
         return w, h
-    except Exception:
-        raise ValueError('figsize must look like "9.75,4.875"')
+    except Exception as e:
+        raise ValueError('figsize must look like "9.75,4.875"') from e
 
 
 def out_png_for_nc(nc_path: Path, plots_root: Path) -> Path:
@@ -127,8 +128,6 @@ def process_one_target(
     title_fontsize: float,
     suptitle_y: float,
 ) -> tuple[int, int]:
-    """Return (plotted, skipped)."""
-
     if not stats_root.exists():
         print(f"[{label}] SKIP: stats root not found: {stats_root}")
         return (0, 0)
@@ -142,7 +141,9 @@ def process_one_target(
 
     # hard filter by prefix
     nc_files = [p for p in found if p.name.startswith(prefix)]
-    print(f"[{label}] Found {len(found)} files, keeping {len(nc_files)} with prefix '{prefix}'")
+    print(
+        f"[{label}] Found {len(found)} files, keeping {len(nc_files)} with prefix '{prefix}'"
+    )
 
     plotted = 0
     skipped = 0
@@ -181,8 +182,10 @@ def process_one_target(
                 vmin, vmax = vmin_arg, vmax_arg
 
             extent = [
-                float(np.nanmin(lon2d)), float(np.nanmax(lon2d)),
-                float(np.nanmin(lat2d)), float(np.nanmax(lat2d)),
+                float(np.nanmin(lon2d)),
+                float(np.nanmax(lon2d)),
+                float(np.nanmin(lat2d)),
+                float(np.nanmax(lat2d)),
             ]
 
             fig = plt.figure(figsize=(fig_w, fig_h))
@@ -194,9 +197,13 @@ def process_one_target(
             ax.set_extent(extent, crs=ccrs.PlateCarree())
 
             mesh = ax.pcolormesh(
-                lon2d, lat2d, np.asarray(da.values),
+                lon2d,
+                lat2d,
+                np.asarray(da.values),
                 transform=ccrs.PlateCarree(),
-                vmin=vmin, vmax=vmax, cmap=cmap
+                vmin=vmin,
+                vmax=vmax,
+                cmap=cmap,
             )
 
             ax.coastlines(resolution="50m", linewidth=0.8)
@@ -213,10 +220,7 @@ def process_one_target(
 
             units = ds[var].attrs.get("units", "")
             cb = fig.colorbar(
-                mesh, ax=ax,
-                orientation="horizontal",
-                pad=0.12,
-                fraction=0.06
+                mesh, ax=ax, orientation="horizontal", pad=0.12, fraction=0.06
             )
             cb.set_label(units if units else var)
 
@@ -237,8 +241,11 @@ def process_one_target(
 def main() -> None:
     ap = argparse.ArgumentParser()
 
-    ap.add_argument("--pattern", default="*.nc",
-                    help='Glob used to FIND files under YYYYMMDD/HH/FFF (default: "*.nc")')
+    ap.add_argument(
+        "--pattern",
+        default="*.nc",
+        help='Glob used to FIND files under YYYYMMDD/HH/FFF (default: "*.nc")',
+    )
 
     ap.add_argument("--lam-stats-root", default="wxvx_workdir/lam/run/stats")
     ap.add_argument("--lam-plots-root", default="wxvx_workdir/lam/run/plots")
@@ -248,8 +255,16 @@ def main() -> None:
     ap.add_argument("--global-plots-root", default="wxvx_workdir/global/run/plots")
     ap.add_argument("--global-prefix", default="grid_stat_nested")  # change if needed
 
-    ap.add_argument("--do-lam", action="store_true", help="Process LAM (default: on if neither flag given)")
-    ap.add_argument("--do-global", action="store_true", help="Process GLOBAL (default: on if neither flag given)")
+    ap.add_argument(
+        "--do-lam",
+        action="store_true",
+        help="Process LAM (default: on if neither flag given)",
+    )
+    ap.add_argument(
+        "--do-global",
+        action="store_true",
+        help="Process GLOBAL (default: on if neither flag given)",
+    )
 
     ap.add_argument("--vmin", type=float, default=None)
     ap.add_argument("--vmax", type=float, default=None)
