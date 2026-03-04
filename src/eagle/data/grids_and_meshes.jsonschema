@@ -1,0 +1,41 @@
+{
+  "properties": {
+    "grids_and_meshes": {
+      "additionalProperties": false,
+      "properties": {
+        "filenames": {
+          "additionalProperties": false,
+          "properties": {
+            "gfs_target_grid": {
+              "type": "string"
+            },
+            "hrrr_target_grid": {
+              "type": "string"
+            },
+            "latent_mesh": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "gfs_target_grid",
+            "hrrr_target_grid",
+            "latent_mesh"
+          ],
+          "type": "object"
+        },
+        "rundir": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "filenames",
+        "rundir"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "grids_and_meshes"
+  ],
+  "type": "object"
+}

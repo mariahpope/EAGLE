@@ -1,0 +1,88 @@
+{
+  "properties": {
+    "zarr": {
+      "additionalProperties": false,
+      "properties": {
+        "execution": {
+          "$ref": "urn:uwtools:execution-parallel"
+        },
+        "name": {
+          "type": "string"
+        },
+        "rundir": {
+          "type": "string"
+        },
+        "ufs2arco": {
+          "properties": {
+            "attrs": {
+              "type": "object"
+            },
+            "directories": {
+              "type": "object"
+            },
+            "mover": {
+              "type": "object"
+            },
+            "multisource": {
+              "items": {
+                "properties": {
+                  "source": {
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "type": "object"
+                  },
+                  "transforms": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "source"
+                ],
+                "type": "object"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "target": {
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": "object"
+            },
+            "transforms": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "mover",
+            "directories",
+            "target"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "execution",
+        "name",
+        "rundir",
+        "ufs2arco"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "zarr"
+  ],
+  "type": "object"
+}
